@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
+    - name: Install dependencies
+      run: pip install requests
     - name: Set environment variables
       run: |
         echo "WITHINGS_CALLBACK_URL=${{ secrets.WITHINGS_CALLBACK_URL }}" >> $GITHUB_ENV
