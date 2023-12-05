@@ -1,0 +1,28 @@
+name: Run withings-sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+  # schedule:
+    # - cron: '0 0 * * *'  # Runs every day at midnight
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: pip install withings-sync
+    - name: Create config file
+      run: |
+        echo '{
+          "access_token": "${{ secrets.WITHINGS_ACCESS_TOKEN }}"
+        }' > config/withings_user.json
+    - name: Run withings-sync
+      run: withings-sync --gp ${{ secrets.GARMIN_PASSWORD }} --gu ${{ secrets.GARMIN_USERNAME }} --no-upload -v
