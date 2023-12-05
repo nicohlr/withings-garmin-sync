@@ -5,8 +5,8 @@ on:
   push:
     branches:
       - develop
-  # schedule:
-    # - cron: '0 0 * * *'  # Runs every day at midnight
+  schedule:
+    - cron: '0 0 * * *'  # Runs every day at midnight
 
 jobs:
   sync:
@@ -28,7 +28,8 @@ jobs:
         echo "WITHINGS_AUTH_CODE=${{ secrets.WITHINGS_AUTH_CODE }}" >> $GITHUB_ENV
         echo "WITHINGS_REFRESH_TOKEN=${{ secrets.WITHINGS_REFRESH_TOKEN }}" >> $GITHUB_ENV
         echo "WITHINGS_USER_ID=${{ secrets.WITHINGS_USER_ID }}" >> $GITHUB_ENV
+        echo "YESTERDAY_DATE=$(date -d "yesterday" +'%Y-%m-%d')" >> $GITHUB_ENV
     - name: Run withings-sync
       run: | 
         cd src/
-        python sync.py --gp ${{ secrets.GARMIN_PASSWORD }} --gu ${{ secrets.GARMIN_USERNAME }} --no-upload -v
+        python sync.py --gp ${{ secrets.GARMIN_PASSWORD }} --gu ${{ secrets.GARMIN_USERNAME }} -v -f ${{ env.YESTERDAY_DATE }}

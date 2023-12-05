@@ -34,22 +34,6 @@ class WithingsOAuth2:
             "userid": os.environ["WITHINGS_USER_ID"],
         }
 
-        if not self.user_config.get("access_token"):
-            if not self.user_config.get("authentification_code"):
-                self.user_config[
-                    "authentification_code"
-                ] = self.get_authenticationcode()
-            try:
-                self.get_accesstoken()
-            except Exception as e:
-                log.warning(
-                    "Could not get access-token. Trying to renew auth_code"
-                )
-                self.user_config[
-                    "authentification_code"
-                ] = self.get_authenticationcode()
-                self.get_accesstoken()
-
         self.refresh_accesstoken()
 
     def update_config(self):
@@ -111,17 +95,10 @@ class WithingsOAuth2:
         body = resp.get("body")
 
         if status != 0:
-            log.error("Received error code: %d", status)
-            log.error(
-                "Check here for an interpretation of this error: "
-                "http://developer.withings.com/api-reference#section/Response-status"
-            )
-            log.error("")
-            log.error(
-                "If it's regarding an invalid code, try to start the"
-                " script again to obtain a new link."
-            )
-            raise
+            self.user_config[
+                "authentification_code"
+            ] = self.get_authenticationcode()
+            self.get_accesstoken()
 
         self.user_config["access_token"] = body.get("access_token")
         self.user_config["refresh_token"] = body.get("refresh_token")
@@ -146,16 +123,10 @@ class WithingsOAuth2:
         body = resp.get("body")
 
         if status != 0:
-            log.error("Received error code: %d", status)
-            log.error(
-                "Check here for an interpretation of this error: "
-                "http://developer.withings.com/api-reference#section/Response-status"
-            )
-            log.error("")
-            log.error(
-                "If it's regarding an invalid code, try to start the"
-                " script again to obtain a new link."
-            )
+            self.user_config[
+                "authentification_code"
+            ] = self.get_authenticationcode()
+            self.get_accesstoken()
 
         self.user_config["access_token"] = body.get("access_token")
         self.user_config["refresh_token"] = body.get("refresh_token")
