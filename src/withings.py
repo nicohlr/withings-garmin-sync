@@ -1,10 +1,10 @@
 """This module takes care of the communication with Withings."""
-from datetime import date, datetime
-import logging
-import json
 import os
 import time
+import logging
 import requests
+
+from datetime import date, datetime
 
 log = logging.getLogger("withings")
 
@@ -12,8 +12,31 @@ AUTHORIZE_URL = "https://account.withings.com/oauth2_user/authorize2"
 TOKEN_URL = "https://wbsapi.withings.net/v2/oauth2"
 GETMEAS_URL = "https://wbsapi.withings.net/measure?action=getmeas"
 
-APP_CONFIG = "config/withings_app.json"
-USER_CONFIG = "config/withings_user.json"
+
+def get_first_connexion_credentials(client_id, consumer_secret, callback_url):
+    url = AUTHORIZE_URL + "?"
+    for key, value in params.items():
+        url = url + key + "=" + value + "&"
+
+    print(f"Go to {url} and get authentification code.")
+    authentification_code = input("Token : ")
+
+    params = {
+        "action": "requesttoken",
+        "grant_type": "authorization_code",
+        "client_id": client_id,
+        "client_secret": consumer_secret,
+        "code": authentification_code,
+        "redirect_uri": callback_url,
+    }
+
+    req = requests.post(TOKEN_URL, params)
+    resp = req.json()
+    body = resp.get("body")
+
+    print("Access token: ", body.get("access_token"))
+    print("Refresh token: ", body.get("refresh_token"))
+    print("Authentification code: ", authentification_code)
 
 
 class WithingsOAuth2:
@@ -22,87 +45,21 @@ class WithingsOAuth2:
     app_config = user_config = None
 
     def __init__(self):
-        self.app_config = {
-            "callback_url": os.environ["WITHINGS_CALLBACK_URL"],
-            "client_id": os.environ["WITHINGS_CLIENT_ID"],
-            "consumer_secret": os.environ["WITHINGS_CONSUMER_SECRET"],
-        }
-        self.user_config = {
-            "access_token": os.environ["WITHINGS_ACCESS_TOKEN"],
-            "authentification_code": os.environ["WITHINGS_AUTH_CODE"],
-            "refresh_token": os.environ["WITHINGS_REFRESH_TOKEN"],
-            "userid": os.environ["WITHINGS_USER_ID"],
-        }
+        try:
+            self.app_config = {
+                "callback_url": os.environ["WITHINGS_CALLBACK_URL"],
+                "client_id": os.environ["WITHINGS_CLIENT_ID"],
+                "consumer_secret": os.environ["WITHINGS_CONSUMER_SECRET"],
+            }
+            self.user_config = {
+                "access_token": os.environ["WITHINGS_ACCESS_TOKEN"],
+                "authentification_code": os.environ["WITHINGS_AUTH_CODE"],
+                "refresh_token": os.environ["WITHINGS_REFRESH_TOKEN"],
+            }
+        except KeyError:
+            raise AttributeError("Some ENVIRONMENT variables are not set.")
 
         self.refresh_accesstoken()
-
-    def update_config(self):
-        """updates config file"""
-        self.user_cfg.write()
-
-    def get_authenticationcode(self):
-        """get Withings authentication code"""
-        params = {
-            "response_type": "code",
-            "client_id": self.app_config["client_id"],
-            "state": "OK",
-            "scope": "user.metrics",
-            "redirect_uri": self.app_config["callback_url"],
-        }
-
-        log.warning(
-            "User interaction needed to get Authentification "
-            "Code from Withings!"
-        )
-        log.warning("")
-        log.warning(
-            "Open the following URL in your web browser and copy back "
-            "the token. You will have *30 seconds* before the "
-            "token expires. HURRY UP!"
-        )
-        log.warning("(This is one-time activity)")
-        log.warning("")
-
-        url = AUTHORIZE_URL + "?"
-
-        for key, value in params.items():
-            url = url + key + "=" + value + "&"
-
-        log.info(url)
-        log.info("")
-
-        authentification_code = input("Token : ")
-
-        return authentification_code
-
-    def get_accesstoken(self):
-        """get Withings access token"""
-        log.info("Get Access Token")
-
-        params = {
-            "action": "requesttoken",
-            "grant_type": "authorization_code",
-            "client_id": self.app_config["client_id"],
-            "client_secret": self.app_config["consumer_secret"],
-            "code": self.user_config["authentification_code"],
-            "redirect_uri": self.app_config["callback_url"],
-        }
-
-        req = requests.post(TOKEN_URL, params)
-        resp = req.json()
-
-        status = resp.get("status")
-        body = resp.get("body")
-
-        if status != 0:
-            self.user_config[
-                "authentification_code"
-            ] = self.get_authenticationcode()
-            self.get_accesstoken()
-
-        self.user_config["access_token"] = body.get("access_token")
-        self.user_config["refresh_token"] = body.get("refresh_token")
-        self.user_config["userid"] = body.get("userid")
 
     def refresh_accesstoken(self):
         """refresh Withings access token"""
@@ -118,19 +75,14 @@ class WithingsOAuth2:
 
         req = requests.post(TOKEN_URL, params)
         resp = req.json()
-
-        status = resp.get("status")
+        if resp.get("status") != 0:
+            raise AttributeError(
+                "Withings login failed, please check your credentials."
+            )
         body = resp.get("body")
-
-        if status != 0:
-            self.user_config[
-                "authentification_code"
-            ] = self.get_authenticationcode()
-            self.get_accesstoken()
 
         self.user_config["access_token"] = body.get("access_token")
         self.user_config["refresh_token"] = body.get("refresh_token")
-        self.user_config["userid"] = body.get("userid")
 
 
 class WithingsAccount:
