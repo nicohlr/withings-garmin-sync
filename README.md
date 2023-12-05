@@ -1,20 +1,21 @@
 # Withings-Garmin Sync
 
-This project is inspired by [withings-sync](https://github.com/jaroslawhartman/withings-sync). It provides a Python script that is scheduled to run via a GitHub Actions workflow. The script fetches data from Withings and uploads it to Garmin Connect every day at midnight.
+This project is inspired by [withings-sync](https://github.com/jaroslawhartman/withings-sync). It provides a Python script that is scheduled to run via a GitHub Actions workflow. The Github action script fetches data from Withings and uploads it to Garmin Connect every day at midnight.
 
-## Features
-
-- **Automated Data Sync:** The script automatically fetches your health data from Withings and uploads it to your Garmin Connect account.
-- **Scheduled Execution:** The script is set to run every day at midnight, ensuring your Garmin Connect data is always up-to-date with your latest Withings data.
-- **GitHub Actions Integration:** The script execution is managed by a GitHub Actions workflow, making it easy to maintain and monitor.
-
-## Setup
+## Setup & Usage
 
 To use this script, you'll need to set up a few things:
 
-1. **GitHub Secrets:** The script requires access to your Withings and Garmin Connect accounts. You'll need to set up the necessary access tokens and account details as secrets in your GitHub repository.
-2. **Python Environment:** The script is written in Python and requires a Python environment to run. The GitHub Actions workflow takes care of setting up this environment for you.
+Create a withings client app from [here] and set the following environment variables with your app details:
 
-## Usage
+    - WITHINGS_CALLBACK_URL
+    - WITHINGS_CLIENT_ID
+    - WITHINGS_CONSUMER_SECRET
 
-Once everything is set up, the script will run automatically every day at midnight. You can check the GitHub Actions tab in your repository to see the status of the script execution.
+Then, use the `get_first_connexion_credentials` function from the `src/withings.py` file to get the needed credentials. Set these credentials to the following environment variables:
+
+    - WITHINGS_ACCESS_TOKEN
+    - WITHINGS_AUTH_CODE
+    - WITHINGS_REFRESH_TOKEN
+
+You can now run the script `src/sync.py` to fetch you withings data and send them to Garmin Connect. Use a github action linked to your repo to automate the process (see `.github/workflows/sync-wt-gc.yml` for an example).
