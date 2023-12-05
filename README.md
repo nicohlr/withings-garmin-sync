@@ -6,7 +6,7 @@ This project is inspired by [withings-sync](https://github.com/jaroslawhartman/w
 
 To use this script, you'll need to set up a few things:
 
-Create a withings client app from [here] and set the following environment variables with your app details:
+Create a withings client app from [here](https://account.withings.com/partner/add_oauth2) and set the following environment variables with your app details:
 
     - WITHINGS_CALLBACK_URL
     - WITHINGS_CLIENT_ID
