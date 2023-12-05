@@ -34,5 +34,5 @@ class GarminConnect:
 def sync_garmin(fit_file, args):
     """Sync generated fit file to Garmin Connect"""
     garmin = GarminConnect()
-    garmin.login(args.GARMIN_USERNAME, args.GARMIN_PASSWORD)
+    garmin.login(args.garmin_username, args.garmin_password)
     return garmin.upload_file(fit_file)
