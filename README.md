@@ -14,7 +14,7 @@ To use this script, you'll need to set up a few environment variables needed to 
     - `WITHINGS_CLIENT_ID`
     - `WITHINGS_CONSUMER_SECRET`
 
-> **Note:**
+> [!NOTE]
 > You can create an empty GitHub Pages static site using your repo and use it as the callback URL for your Withings application.
 
 2. Use the `get_first_connexion_credentials` function from the `src/withings.py` file to get the needed credentials. Set these credentials to the following environment variables:
