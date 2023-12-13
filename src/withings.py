@@ -1,9 +1,13 @@
 """This module takes care of the communication with Withings."""
 import os
 import time
+import base64
 import logging
 import requests
+import nacl.encoding
+import nacl.utils
 
+from nacl.public import PrivateKey, PublicKey, Box
 from datetime import date, datetime
 
 log = logging.getLogger("withings")
@@ -11,32 +15,6 @@ log = logging.getLogger("withings")
 AUTHORIZE_URL = "https://account.withings.com/oauth2_user/authorize2"
 TOKEN_URL = "https://wbsapi.withings.net/v2/oauth2"
 GETMEAS_URL = "https://wbsapi.withings.net/measure?action=getmeas"
-
-
-def get_first_connexion_credentials(client_id, consumer_secret, callback_url):
-    url = AUTHORIZE_URL + "?"
-    for key, value in params.items():
-        url = url + key + "=" + value + "&"
-
-    print(f"Go to {url} and get authentification code.")
-    authentification_code = input("Token : ")
-
-    params = {
-        "action": "requesttoken",
-        "grant_type": "authorization_code",
-        "client_id": client_id,
-        "client_secret": consumer_secret,
-        "code": authentification_code,
-        "redirect_uri": callback_url,
-    }
-
-    req = requests.post(TOKEN_URL, params)
-    resp = req.json()
-    body = resp.get("body")
-
-    print("Access token: ", body.get("access_token"))
-    print("Refresh token: ", body.get("refresh_token"))
-    print("Authentification code: ", authentification_code)
 
 
 class WithingsOAuth2:
@@ -56,10 +34,24 @@ class WithingsOAuth2:
                 "authentification_code": os.environ["WITHINGS_AUTH_CODE"],
                 "refresh_token": os.environ["WITHINGS_REFRESH_TOKEN"],
             }
+            self.gh_token = os.environ["GH_TOKEN"]
+            self.gh_repository = os.environ["GH_REPOSITORY"]
         except KeyError:
-            raise AttributeError("Some ENVIRONMENT variables are not set.")
+            raise AttributeError("Some ENVIRONMENT variables are not found.")
 
         self.refresh_accesstoken()
+        self.update_github_secret(
+            secret_name="WITHINGS_ACCESS_TOKEN",
+            secret_value=self.user_config["access_token"],
+            github_repository=self.gh_repository,
+            github_token=self.gh_token
+        )
+        self.update_github_secret(
+            secret_name="WITHINGS_REFRESH_TOKEN",
+            secret_value=self.user_config["refresh_token"],
+            github_repository=self.gh_repository,
+            github_token=self.gh_token
+        )
 
     def refresh_accesstoken(self):
         """refresh Withings access token"""
@@ -83,6 +75,60 @@ class WithingsOAuth2:
 
         self.user_config["access_token"] = body.get("access_token")
         self.user_config["refresh_token"] = body.get("refresh_token")
+
+    def encrypt_secret(self, public_key: str, secret_value: str) -> str:
+        """Encrypt the secret with the provided public key using sodium lib"""
+        public_key_bytes = base64.b64decode(public_key)
+        public_key = PublicKey(public_key_bytes)
+
+        private_key = PrivateKey.generate()
+        sealed_box = Box(private_key, public_key)
+
+        encrypted = sealed_box.encrypt(
+            secret_value.encode(), encoder=nacl.encoding.Base64Encoder
+        )
+        return encrypted.decode("utf-8")
+
+    def get_public_key(self, github_token, github_repository):
+        """Get the public key for the repository's secrets."""
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github+json",
+        }
+        response = requests.get(
+            f"https://api.github.com/repos/{github_repository}/actions/secrets/public-key",
+            headers=headers,
+        )
+        response.raise_for_status()
+        return response.json()["key"], response.json()["key_id"]
+
+    def update_github_secret(
+        self, secret_name, secret_value, github_token, github_repository
+    ):
+        public_key, key_id = self.get_public_key(
+            github_token, github_repository
+        )
+        encrypted_value = self.encrypt_secret(public_key, secret_value)
+
+        headers = {
+            "Authorization": f"token {github_token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        data = {
+            "encrypted_value": encrypted_value,
+            "key_id": key_id,
+        }
+
+        url = f"https://api.github.com/repos/{github_repository}/actions/secrets/{secret_name}"
+
+        try:
+            logging.info(f"Updating secret: {secret_name} for repository: {github_repository}")
+            response = requests.put(url, headers=headers, json=data)
+            response.raise_for_status()  # Raises an HTTPError if the HTTP request returned an unsuccessful status code
+            logging.info(f"Successfully updated secret: {secret_name}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Failed to update secret: {secret_name}. Error: {e}")
+            raise e  # Re-raise the exception after logging
 
 
 class WithingsAccount:

@@ -18,6 +18,8 @@ jobs:
       run: pip install -r requirements.txt
     - name: Set environment variables
       run: |
+        echo "GH_REPOSITORY=${{ secrets.GH_REPOSITORY }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
         echo "WITHINGS_CALLBACK_URL=${{ secrets.WITHINGS_CALLBACK_URL }}" >> $GITHUB_ENV
         echo "WITHINGS_CLIENT_ID=${{ secrets.WITHINGS_CLIENT_ID }}" >> $GITHUB_ENV
         echo "WITHINGS_CONSUMER_SECRET=${{ secrets.WITHINGS_CONSUMER_SECRET }}" >> $GITHUB_ENV
