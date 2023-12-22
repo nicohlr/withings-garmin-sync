@@ -1,0 +1,34 @@
+name: Run withings-sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Runs every day at midnight
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    - name: Set environment variables
+      run: |
+        echo "GH_REPOSITORY=${{ secrets.GH_REPOSITORY }}" >> $GITHUB_ENV
+        echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+        echo "WITHINGS_CALLBACK_URL=${{ secrets.WITHINGS_CALLBACK_URL }}" >> $GITHUB_ENV
+        echo "WITHINGS_CLIENT_ID=${{ secrets.WITHINGS_CLIENT_ID }}" >> $GITHUB_ENV
+        echo "WITHINGS_CONSUMER_SECRET=${{ secrets.WITHINGS_CONSUMER_SECRET }}" >> $GITHUB_ENV
+        echo "WITHINGS_ACCESS_TOKEN=${{ secrets.WITHINGS_ACCESS_TOKEN }}" >> $GITHUB_ENV
+        echo "WITHINGS_AUTH_CODE=${{ secrets.WITHINGS_AUTH_CODE }}" >> $GITHUB_ENV
+        echo "WITHINGS_REFRESH_TOKEN=${{ secrets.WITHINGS_REFRESH_TOKEN }}" >> $GITHUB_ENV
+        echo "WITHINGS_USER_ID=${{ secrets.WITHINGS_USER_ID }}" >> $GITHUB_ENV
+        echo "YESTERDAY_DATE=$(date -d "yesterday" +'%Y-%m-%d')" >> $GITHUB_ENV
+    - name: Run withings-sync
+      run: | 
+        cd src/
+        python sync.py --gp ${{ secrets.GARMIN_PASSWORD }} --gu ${{ secrets.GARMIN_USERNAME }} -v -f ${{ env.YESTERDAY_DATE }}
